@@ -1,7 +1,8 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { useState, useRef, useCallback, type ReactNode, type MouseEvent } from "react"
+import { useState, useRef, useCallback, useEffect, type ReactNode, type MouseEvent } from "react"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface MacWindowProps {
   title: string
@@ -20,6 +21,9 @@ interface MacWindowProps {
 
 type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw' | null
 
+// MenuBar height constant (includes border)
+const MENU_BAR_HEIGHT = 42
+
 export function MacWindow({ 
   title, 
   children, 
@@ -34,6 +38,7 @@ export function MacWindow({
   canMinimize = false,
   canMaximize = false
 }: MacWindowProps) {
+  const isMobile = useIsMobile()
   const [position, setPosition] = useState(initialPosition)
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [isDragging, setIsDragging] = useState(false)
@@ -45,8 +50,20 @@ export function MacWindow({
   const resizeStart = useRef({ x: 0, y: 0, width: 0, height: 0, posX: 0, posY: 0 })
   const windowRef = useRef<HTMLDivElement>(null)
 
+  // Center window on mobile when it mounts or when switching to mobile
+  useEffect(() => {
+    if (isMobile && draggable) {
+      const centerX = (window.innerWidth - (windowRef.current?.offsetWidth || 0)) / 2
+      const centerY = (window.innerHeight - (windowRef.current?.offsetHeight || 0)) / 2
+      setPosition({
+        x: Math.max(8, centerX),
+        y: Math.max(MENU_BAR_HEIGHT + 8, centerY)
+      })
+    }
+  }, [isMobile, draggable])
+
   const handleMouseDown = useCallback((e: MouseEvent) => {
-    if (!draggable) return
+    if (!draggable || isMobile) return // Disable dragging on mobile
     onFocus?.()
     setIsDragging(true)
     dragOffset.current = {
@@ -57,12 +74,12 @@ export function MacWindow({
     const handleMouseMove = (e: globalThis.MouseEvent) => {
       const newX = e.clientX - dragOffset.current.x
       const newY = e.clientY - dragOffset.current.y
-      // Keep window within viewport bounds
+      // Keep window within viewport bounds, but below the menu bar
       const maxX = window.innerWidth - 100
       const maxY = window.innerHeight - 100
       setPosition({
         x: Math.max(0, Math.min(newX, maxX)),
-        y: Math.max(0, Math.min(newY, maxY))
+        y: Math.max(MENU_BAR_HEIGHT, Math.min(newY, maxY))
       })
     }
 
@@ -77,7 +94,7 @@ export function MacWindow({
   }, [draggable, position, onFocus])
 
   const handleResizeStart = useCallback((e: MouseEvent, direction: ResizeDirection) => {
-    if (!resizable || isMaximized) return
+    if (!resizable || isMaximized || isMobile) return // Disable resizing on mobile
     e.stopPropagation()
     onFocus?.()
     
@@ -122,9 +139,11 @@ export function MacWindow({
         newHeight = Math.max(minHeight, resizeStart.current.height + deltaY)
       } else if (direction?.includes('n')) {
         const potentialHeight = resizeStart.current.height - deltaY
-        if (potentialHeight >= minHeight) {
+        const potentialY = resizeStart.current.posY + deltaY
+        // Don't allow resizing above the menu bar
+        if (potentialHeight >= minHeight && potentialY >= MENU_BAR_HEIGHT) {
           newHeight = potentialHeight
-          newY = resizeStart.current.posY + deltaY
+          newY = potentialY
         }
       }
 
@@ -156,7 +175,7 @@ export function MacWindow({
     e.stopPropagation()
     if (!isMaximized) {
       setPreMaximizeState({ position, size, wasSet: true })
-      setPosition({ x: 0, y: 0 })
+      setPosition({ x: 0, y: MENU_BAR_HEIGHT })
     } else if (preMaximizeState.wasSet) {
       setPosition(preMaximizeState.position)
       setSize(preMaximizeState.size)
@@ -173,14 +192,26 @@ export function MacWindow({
         resizable && !isMaximized && "min-w-[320px] min-h-[200px]",
         draggable && "absolute",
         isDragging && "cursor-grabbing select-none",
-        isMaximized && "!w-[calc(100vw-8px)] !h-[calc(100vh-70px)]",
+        isMaximized && `!w-[calc(100vw-8px)]`,
+        // Mobile-specific styles: take almost full screen and center, below menu bar
+        isMobile && `!fixed !w-[calc(100vw-32px)] !left-4`,
         className
       )}
       style={{ 
-        ...(maxHeight && !isMaximized ? { maxHeight } : {}),
-        ...(draggable ? { left: isMaximized ? 4 : position.x, top: isMaximized ? 4 : position.y, zIndex } : {}),
-        ...(size.width > 0 && !isMaximized ? { width: size.width } : {}),
-        ...(size.height > 0 && !isMaximized ? { height: size.height } : {})
+        ...(maxHeight && !isMaximized && !isMobile ? { maxHeight } : {}),
+        ...(draggable && !isMobile ? { 
+          left: isMaximized ? 4 : position.x, 
+          top: isMaximized ? MENU_BAR_HEIGHT : position.y, 
+          zIndex 
+        } : {}),
+        ...(size.width > 0 && !isMaximized && !isMobile ? { width: size.width } : {}),
+        ...(size.height > 0 && !isMaximized && !isMobile ? { height: size.height } : {}),
+        ...(isMaximized && !isMobile ? { height: `calc(100vh - ${MENU_BAR_HEIGHT + 28}px)` } : {}),
+        ...(isMobile ? { 
+          zIndex,
+          top: MENU_BAR_HEIGHT + 16,
+          height: `calc(100vh - ${MENU_BAR_HEIGHT + 48}px)`
+        } : {})
       }}
       onClick={handleWindowClick}
     >
@@ -188,7 +219,7 @@ export function MacWindow({
       <div 
         className={cn(
           "flex items-center justify-between bg-primary px-2 py-1 border-b-2 border-border flex-shrink-0",
-          draggable && "cursor-grab",
+          draggable && !isMobile && "cursor-grab",
           isDragging && "cursor-grabbing"
         )}
         onMouseDown={handleMouseDown}
@@ -233,7 +264,7 @@ export function MacWindow({
         </div>
       )}
       {/* Resize Handles */}
-      {resizable && !isMinimized && !isMaximized && (
+      {resizable && !isMinimized && !isMaximized && !isMobile && (
         <>
           {/* Edge Handles */}
           <div 

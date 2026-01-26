@@ -404,7 +404,7 @@ export default function Home() {
             onClose={() => setShowOptimizer(false)}
             draggable
             resizable
-            initialPosition={{ x: 120, y: 20 }}
+            initialPosition={{ x: 120, y: 60 }}
             onFocus={() => bringToFront("optimizer")}
             zIndex={getZIndex("optimizer")}
             canMaximize
@@ -419,7 +419,7 @@ export default function Home() {
             className="w-80 max-w-[calc(100vw-32px)]"
             onClose={() => setShowAbout(false)}
             draggable
-            initialPosition={{ x: 200, y: 80 }}
+            initialPosition={{ x: 200, y: 120 }}
             onFocus={() => bringToFront("about")}
             zIndex={getZIndex("about")}
             canMinimize
@@ -450,7 +450,7 @@ export default function Home() {
             className="w-96 max-w-[calc(100vw-32px)]"
             onClose={() => setShowHelp(false)}
             draggable
-            initialPosition={{ x: 250, y: 100 }}
+            initialPosition={{ x: 250, y: 140 }}
             onFocus={() => bringToFront("help")}
             zIndex={getZIndex("help")}
             canMinimize
