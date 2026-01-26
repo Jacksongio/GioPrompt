@@ -61,12 +61,48 @@ export function DesktopIcon({
   useEffect(() => {
     if (iconId && onPositionChange && initialPosition) {
       const snapped = snapToGrid(initialPosition.x, initialPosition.y)
-      onPositionChange(iconId, snapped)
-      setPosition(snapped)
-      setDragPosition(snapped)
-      setSnapPreview(snapped)
+      
+      // Keep icon within viewport bounds
+      const maxX = window.innerWidth - GRID_SIZE_X
+      const maxY = window.innerHeight - GRID_SIZE_Y - 40
+      const boundedSnapped = {
+        x: Math.max(0, Math.min(snapped.x, maxX)),
+        y: Math.max(0, Math.min(snapped.y, maxY))
+      }
+      
+      onPositionChange(iconId, boundedSnapped)
+      setPosition(boundedSnapped)
+      setDragPosition(boundedSnapped)
+      setSnapPreview(boundedSnapped)
     }
   }, [iconId, onPositionChange, initialPosition?.x, initialPosition?.y])
+
+  // Handle window resize to keep icons within bounds
+  useEffect(() => {
+    if (!initialPosition) return
+
+    const handleResize = () => {
+      const maxX = window.innerWidth - GRID_SIZE_X
+      const maxY = window.innerHeight - GRID_SIZE_Y - 40
+      
+      setPosition(prev => {
+        const bounded = {
+          x: Math.max(0, Math.min(prev.x, maxX)),
+          y: Math.max(0, Math.min(prev.y, maxY))
+        }
+        
+        // Update parent if position changed
+        if (iconId && onPositionChange && (bounded.x !== prev.x || bounded.y !== prev.y)) {
+          onPositionChange(iconId, bounded)
+        }
+        
+        return bounded
+      })
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [initialPosition, iconId, onPositionChange])
 
   // Check if a position is occupied by another icon
   const isPositionOccupied = useCallback((pos: { x: number; y: number }) => {

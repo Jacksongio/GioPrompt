@@ -158,31 +158,43 @@ export default function Home() {
   }))
 
   useEffect(() => {
-    // Set right side icon positions and trash position after mount
-    const newRightX = window.innerWidth - 100
-    const newTrashPos = { x: window.innerWidth - 100, y: window.innerHeight - 150 }
+    const updatePositions = () => {
+      // Set right side icon positions and trash position
+      const newRightX = window.innerWidth - 100
+      const newTrashPos = { x: window.innerWidth - 100, y: window.innerHeight - 150 }
+      
+      // Calculate bottom left positions
+      const newBombPos = { x: 8, y: window.innerHeight - 234 } // 150 + 84 (one grid cell up from trash)
+      const newSadmacPos = { x: 8, y: window.innerHeight - 150 }
+      
+      setRightSideX(newRightX)
+      setTrashPosition(newTrashPos)
+      setBottomLeftPositions({
+        bomb: newBombPos,
+        sadmac: newSadmacPos
+      })
+      
+      // Also register their positions in the icon positions map
+      setIconPositions(prev => ({
+        ...prev,
+        floppy: snapToGrid(newRightX, 16),
+        toaster: snapToGrid(newRightX, 100),
+        coffee: snapToGrid(newRightX, 184),
+        trash: snapToGrid(newTrashPos.x, newTrashPos.y),
+        bomb: snapToGrid(newBombPos.x, newBombPos.y),
+        sadmac: snapToGrid(newSadmacPos.x, newSadmacPos.y)
+      }))
+    }
+
+    // Initial positioning
+    updatePositions()
+
+    // Add resize listener for responsive behavior
+    window.addEventListener('resize', updatePositions)
     
-    // Calculate bottom left positions
-    const newBombPos = { x: 8, y: window.innerHeight - 234 } // 150 + 84 (one grid cell up from trash)
-    const newSadmacPos = { x: 8, y: window.innerHeight - 150 }
-    
-    setRightSideX(newRightX)
-    setTrashPosition(newTrashPos)
-    setBottomLeftPositions({
-      bomb: newBombPos,
-      sadmac: newSadmacPos
-    })
-    
-    // Also register their positions in the icon positions map
-    setIconPositions(prev => ({
-      ...prev,
-      floppy: snapToGrid(newRightX, 16),
-      toaster: snapToGrid(newRightX, 100),
-      coffee: snapToGrid(newRightX, 184),
-      trash: snapToGrid(newTrashPos.x, newTrashPos.y),
-      bomb: snapToGrid(newBombPos.x, newBombPos.y),
-      sadmac: snapToGrid(newSadmacPos.x, newSadmacPos.y)
-    }))
+    return () => {
+      window.removeEventListener('resize', updatePositions)
+    }
   }, [snapToGrid])
 
   const bringToFront = useCallback((windowId: WindowId) => {
@@ -224,6 +236,15 @@ export default function Home() {
 
       {/* Desktop Area */}
       <main className="flex-1 relative p-4 overflow-auto">
+        {/* Background Logo */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <img 
+            src="/gioprompt.png" 
+            alt="GioPrompt Logo" 
+            className="max-w-[40%] max-h-[40%] object-contain"
+          />
+        </div>
+
         {/* Desktop Icons - all draggable */}
         <DesktopIcon
           icon={<PromptIcon />}
@@ -379,7 +400,7 @@ export default function Home() {
         {showOptimizer && (
           <MacWindow
             title="GioPrompt v1.0 - Prompt Optimizer"
-            className="w-[calc(100vw-140px)] max-h-[calc(100vh-100px)]"
+            className="w-[calc(100vw-140px)] sm:w-[calc(100vw-140px)] max-w-[1400px] max-h-[calc(100vh-100px)]"
             onClose={() => setShowOptimizer(false)}
             draggable
             resizable
@@ -395,7 +416,7 @@ export default function Home() {
         {showAbout && (
           <MacWindow
             title="About GioPrompt"
-            className="w-80"
+            className="w-80 max-w-[calc(100vw-32px)]"
             onClose={() => setShowAbout(false)}
             draggable
             initialPosition={{ x: 200, y: 80 }}
@@ -426,7 +447,7 @@ export default function Home() {
         {showHelp && (
           <MacWindow
             title="Help"
-            className="w-96"
+            className="w-96 max-w-[calc(100vw-32px)]"
             onClose={() => setShowHelp(false)}
             draggable
             initialPosition={{ x: 250, y: 100 }}

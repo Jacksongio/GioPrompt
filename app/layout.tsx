@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: 'GioPrompt - AI Prompt Optimizer',
   description: 'Transform your AI prompts into powerful, optimized instructions for video, text, and image generation',
   generator: 'v0.app',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
   icons: {
     icon: '/favicon.ico',
   },

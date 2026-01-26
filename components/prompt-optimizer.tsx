@@ -66,13 +66,13 @@ const promptTypeConfig: Record<PromptType, { label: string; icon: string; tips: 
   },
 }
 
-async function optimizePrompt(prompt: string, type: PromptType): Promise<string> {
+async function optimizePrompt(prompt: string, type: PromptType, params?: Record<string, string>): Promise<string> {
   const response = await fetch('/api/optimize', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ prompt, type }),
+    body: JSON.stringify({ prompt, type, advancedParams: params }),
   })
 
   if (!response.ok) {
@@ -84,12 +84,28 @@ async function optimizePrompt(prompt: string, type: PromptType): Promise<string>
   return data.optimizedPrompt
 }
 
+interface AdvancedParams {
+  text: { length?: string; tone?: string; format?: string }
+  image: { style?: string; quality?: string; aspectRatio?: string }
+  video: { duration?: string; fps?: string; resolution?: string }
+  code: { language?: string; framework?: string; complexity?: string }
+  music: { bpm?: string; duration?: string; genre?: string; key?: string }
+}
+
 export function PromptOptimizerContent() {
   const [inputPrompt, setInputPrompt] = useState("")
   const [outputPrompt, setOutputPrompt] = useState("")
   const [selectedType, setSelectedType] = useState<PromptType>("text")
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [advancedParams, setAdvancedParams] = useState<AdvancedParams>({
+    text: {},
+    image: {},
+    video: {},
+    code: {},
+    music: {}
+  })
 
   const handleOptimize = async () => {
     if (!inputPrompt.trim()) return
@@ -98,7 +114,8 @@ export function PromptOptimizerContent() {
     setError(null)
     
     try {
-      const optimized = await optimizePrompt(inputPrompt, selectedType)
+      const params = advancedParams[selectedType]
+      const optimized = await optimizePrompt(inputPrompt, selectedType, params)
       setOutputPrompt(optimized)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while optimizing')
@@ -106,6 +123,16 @@ export function PromptOptimizerContent() {
     } finally {
       setIsProcessing(false)
     }
+  }
+
+  const updateAdvancedParam = (key: string, value: string) => {
+    setAdvancedParams(prev => ({
+      ...prev,
+      [selectedType]: {
+        ...prev[selectedType],
+        [key]: value
+      }
+    }))
   }
 
   const handleCopy = () => {
@@ -171,12 +198,211 @@ export function PromptOptimizerContent() {
           {isProcessing ? "Optimizing..." : "Optimize Prompt"}
         </button>
         <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="px-4 py-2 bg-accent text-white border-2 border-border text-lg hover:bg-muted shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
+        >
+          {showAdvanced ? "Hide Advanced" : "Advanced"}
+        </button>
+        <button
           onClick={handleClear}
           className="px-4 py-2 bg-secondary text-card-foreground border-2 border-border text-lg hover:bg-muted shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
         >
           Clear
         </button>
       </div>
+
+      {/* Advanced Settings */}
+      {showAdvanced && (
+        <div className="bg-secondary border-2 border-border p-4">
+          <h3 className="text-card-foreground text-lg font-bold mb-3">Advanced Settings</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {selectedType === "text" && (
+              <>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">Length:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 500 words"
+                    value={advancedParams.text.length || ""}
+                    onChange={(e) => updateAdvancedParam("length", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">Tone:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., professional, casual"
+                    value={advancedParams.text.tone || ""}
+                    onChange={(e) => updateAdvancedParam("tone", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">Format:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., article, email, essay"
+                    value={advancedParams.text.format || ""}
+                    onChange={(e) => updateAdvancedParam("format", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </>
+            )}
+
+            {selectedType === "image" && (
+              <>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">Style:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., photorealistic, anime"
+                    value={advancedParams.image.style || ""}
+                    onChange={(e) => updateAdvancedParam("style", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">Quality:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 4K, 8K, HD"
+                    value={advancedParams.image.quality || ""}
+                    onChange={(e) => updateAdvancedParam("quality", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">Aspect Ratio:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 16:9, 1:1, 9:16"
+                    value={advancedParams.image.aspectRatio || ""}
+                    onChange={(e) => updateAdvancedParam("aspectRatio", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </>
+            )}
+
+            {selectedType === "video" && (
+              <>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">Duration:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 30 seconds, 2 minutes"
+                    value={advancedParams.video.duration || ""}
+                    onChange={(e) => updateAdvancedParam("duration", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">Frame Rate:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 24fps, 30fps, 60fps"
+                    value={advancedParams.video.fps || ""}
+                    onChange={(e) => updateAdvancedParam("fps", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">Resolution:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 4K, HD, 1080p"
+                    value={advancedParams.video.resolution || ""}
+                    onChange={(e) => updateAdvancedParam("resolution", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </>
+            )}
+
+            {selectedType === "code" && (
+              <>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">Language:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Python, JavaScript, TypeScript"
+                    value={advancedParams.code.language || ""}
+                    onChange={(e) => updateAdvancedParam("language", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">Framework:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., React, Django, Express"
+                    value={advancedParams.code.framework || ""}
+                    onChange={(e) => updateAdvancedParam("framework", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">Complexity:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., simple, intermediate, advanced"
+                    value={advancedParams.code.complexity || ""}
+                    onChange={(e) => updateAdvancedParam("complexity", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </>
+            )}
+
+            {selectedType === "music" && (
+              <>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">BPM:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 120, 90-140"
+                    value={advancedParams.music.bpm || ""}
+                    onChange={(e) => updateAdvancedParam("bpm", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">Duration:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 3 minutes, 2:30"
+                    value={advancedParams.music.duration || ""}
+                    onChange={(e) => updateAdvancedParam("duration", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">Genre:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Pop, Rock, Electronic"
+                    value={advancedParams.music.genre || ""}
+                    onChange={(e) => updateAdvancedParam("genre", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-card-foreground text-sm font-bold">Key:</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., C Major, A Minor"
+                    value={advancedParams.music.key || ""}
+                    onChange={(e) => updateAdvancedParam("key", e.target.value)}
+                    className="p-2 bg-input border-2 border-border text-card-foreground focus:outline-none focus:border-primary"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Error Display */}
       {error && (
