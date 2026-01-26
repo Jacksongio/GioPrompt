@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { MenuBar } from "@/components/menu-bar"
 import { DesktopIcon } from "@/components/desktop-icon"
 import { MacWindow } from "@/components/mac-window"
@@ -129,6 +129,61 @@ export default function Home() {
   const [showSystemInfo, setShowSystemInfo] = useState(false)
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null)
   const [windowOrder, setWindowOrder] = useState<WindowId[]>(["optimizer", "about", "help", "styleEditor", "fileManager", "systemInfo"])
+  const [rightSideX, setRightSideX] = useState(1200)
+  const [trashPosition, setTrashPosition] = useState({ x: 1200, y: 600 })
+  const [bottomLeftPositions, setBottomLeftPositions] = useState({ 
+    bomb: { x: 8, y: 600 }, 
+    sadmac: { x: 8, y: 684 } 
+  })
+  
+  // Helper function to snap to grid (same logic as in DesktopIcon)
+  const snapToGrid = useCallback((x: number, y: number) => {
+    const GRID_SIZE_X = 90
+    const GRID_SIZE_Y = 84
+    const GRID_OFFSET_X = 8
+    const GRID_OFFSET_Y = 8
+    const gridX = Math.round((x - GRID_OFFSET_X) / GRID_SIZE_X)
+    const gridY = Math.round((y - GRID_OFFSET_Y) / GRID_SIZE_Y)
+    return {
+      x: Math.max(0, gridX) * GRID_SIZE_X + GRID_OFFSET_X,
+      y: Math.max(0, gridY) * GRID_SIZE_Y + GRID_OFFSET_Y
+    }
+  }, [])
+  
+  // Initialize icon positions with their snapped initial positions
+  const [iconPositions, setIconPositions] = useState<Record<string, { x: number; y: number }>>(() => ({
+    prompt: snapToGrid(16, 16),
+    about: snapToGrid(16, 100),
+    help: snapToGrid(16, 184),
+  }))
+
+  useEffect(() => {
+    // Set right side icon positions and trash position after mount
+    const newRightX = window.innerWidth - 100
+    const newTrashPos = { x: window.innerWidth - 100, y: window.innerHeight - 150 }
+    
+    // Calculate bottom left positions
+    const newBombPos = { x: 8, y: window.innerHeight - 234 } // 150 + 84 (one grid cell up from trash)
+    const newSadmacPos = { x: 8, y: window.innerHeight - 150 }
+    
+    setRightSideX(newRightX)
+    setTrashPosition(newTrashPos)
+    setBottomLeftPositions({
+      bomb: newBombPos,
+      sadmac: newSadmacPos
+    })
+    
+    // Also register their positions in the icon positions map
+    setIconPositions(prev => ({
+      ...prev,
+      floppy: snapToGrid(newRightX, 16),
+      toaster: snapToGrid(newRightX, 100),
+      coffee: snapToGrid(newRightX, 184),
+      trash: snapToGrid(newTrashPos.x, newTrashPos.y),
+      bomb: snapToGrid(newBombPos.x, newBombPos.y),
+      sadmac: snapToGrid(newSadmacPos.x, newSadmacPos.y)
+    }))
+  }, [snapToGrid])
 
   const bringToFront = useCallback((windowId: WindowId) => {
     setWindowOrder(prev => {
@@ -140,6 +195,13 @@ export default function Home() {
   const getZIndex = (windowId: WindowId) => {
     return windowOrder.indexOf(windowId) + 10
   }
+
+  const handleIconPositionChange = useCallback((iconId: string, position: { x: number; y: number }) => {
+    setIconPositions(prev => ({
+      ...prev,
+      [iconId]: position
+    }))
+  }, [])
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
@@ -174,6 +236,9 @@ export default function Home() {
             bringToFront("optimizer")
           }}
           initialPosition={{ x: 16, y: 16 }}
+          iconId="prompt"
+          occupiedPositions={iconPositions}
+          onPositionChange={handleIconPositionChange}
         />
         <DesktopIcon
           icon={<AboutIcon />}
@@ -186,6 +251,9 @@ export default function Home() {
             bringToFront("about")
           }}
           initialPosition={{ x: 16, y: 100 }}
+          iconId="about"
+          occupiedPositions={iconPositions}
+          onPositionChange={handleIconPositionChange}
         />
         <DesktopIcon
           icon={<HelpIcon />}
@@ -198,13 +266,19 @@ export default function Home() {
             bringToFront("help")
           }}
           initialPosition={{ x: 16, y: 184 }}
+          iconId="help"
+          occupiedPositions={iconPositions}
+          onPositionChange={handleIconPositionChange}
         />
         <DesktopIcon
           icon={<TrashIcon />}
           label="Trash"
           selected={selectedIcon === "trash"}
           onClick={() => setSelectedIcon("trash")}
-          initialPosition={{ x: 16, y: 268 }}
+          initialPosition={trashPosition}
+          iconId="trash"
+          occupiedPositions={iconPositions}
+          onPositionChange={handleIconPositionChange}
         />
 
         {/* Easter Egg Icons - Bottom Left */}
@@ -225,7 +299,10 @@ export default function Home() {
               el.style.transform = "rotate(0deg)"
             }, 1000)
           }}
-          initialPosition={{ x: 8, y: 344 }}
+          initialPosition={bottomLeftPositions.bomb}
+          iconId="bomb"
+          occupiedPositions={iconPositions}
+          onPositionChange={handleIconPositionChange}
         />
         <DesktopIcon
           icon={<SadMacIcon />}
@@ -245,48 +322,58 @@ export default function Home() {
               }
             }, 100)
           }}
-          initialPosition={{ x: 8, y: 428 }}
+          initialPosition={bottomLeftPositions.sadmac}
+          iconId="sadmac"
+          occupiedPositions={iconPositions}
+          onPositionChange={handleIconPositionChange}
         />
 
-        {/* Easter Egg Icons - Right Side (using right-aligned container) */}
-        <div className="absolute right-2 top-2 flex flex-col gap-1">
-          <DesktopIcon
-            icon={<FloppyIcon />}
-            label="secrets.dat"
-            selected={selectedIcon === "floppy"}
-            onClick={() => setSelectedIcon("floppy")}
-            onDoubleClick={() => {
-              setSelectedIcon("floppy")
-              alert("[ DATA CORRUPTED ]\n\nJust kidding! Thanks for exploring.")
-            }}
-            draggable={false}
-          />
-          <DesktopIcon
-            icon={<ToasterIcon />}
-            label="Toaster.app"
-            selected={selectedIcon === "toaster"}
-            onClick={() => setSelectedIcon("toaster")}
-            onDoubleClick={() => {
-              setSelectedIcon("toaster")
-              setShowScreensaver(true)
-            }}
-            draggable={false}
-          />
-          <DesktopIcon
-            icon={<CoffeeIcon />}
-            label="Coffee Break"
-            selected={selectedIcon === "coffee"}
-            onClick={() => setSelectedIcon("coffee")}
-            onDoubleClick={() => {
-              setSelectedIcon("coffee")
-              document.body.style.filter = "sepia(0.5) brightness(1.1)"
-              setTimeout(() => {
-                document.body.style.filter = ""
-              }, 2000)
-            }}
-            draggable={false}
-          />
-        </div>
+        {/* Easter Egg Icons - Right Side */}
+        <DesktopIcon
+          icon={<FloppyIcon />}
+          label="secrets.dat"
+          selected={selectedIcon === "floppy"}
+          onClick={() => setSelectedIcon("floppy")}
+          onDoubleClick={() => {
+            setSelectedIcon("floppy")
+            alert("[ DATA CORRUPTED ]\n\nJust kidding! Thanks for exploring.")
+          }}
+          initialPosition={{ x: rightSideX, y: 16 }}
+          iconId="floppy"
+          occupiedPositions={iconPositions}
+          onPositionChange={handleIconPositionChange}
+        />
+        <DesktopIcon
+          icon={<ToasterIcon />}
+          label="Toaster.app"
+          selected={selectedIcon === "toaster"}
+          onClick={() => setSelectedIcon("toaster")}
+          onDoubleClick={() => {
+            setSelectedIcon("toaster")
+            setShowScreensaver(true)
+          }}
+          initialPosition={{ x: rightSideX, y: 100 }}
+          iconId="toaster"
+          occupiedPositions={iconPositions}
+          onPositionChange={handleIconPositionChange}
+        />
+        <DesktopIcon
+          icon={<CoffeeIcon />}
+          label="Coffee Break"
+          selected={selectedIcon === "coffee"}
+          onClick={() => setSelectedIcon("coffee")}
+          onDoubleClick={() => {
+            setSelectedIcon("coffee")
+            document.body.style.filter = "sepia(0.5) brightness(1.1)"
+            setTimeout(() => {
+              document.body.style.filter = ""
+            }, 2000)
+          }}
+          initialPosition={{ x: rightSideX, y: 184 }}
+          iconId="coffee"
+          occupiedPositions={iconPositions}
+          onPositionChange={handleIconPositionChange}
+        />
 
         {/* Draggable Windows */}
         {showOptimizer && (

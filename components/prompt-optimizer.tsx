@@ -4,6 +4,15 @@ import { useState } from "react"
 
 type PromptType = "text" | "image" | "video" | "code" | "music"
 
+interface OptimizeResponse {
+  optimizedPrompt: string
+  usage?: {
+    prompt_tokens: number
+    completion_tokens: number
+    total_tokens: number
+  }
+}
+
 const promptTypeConfig: Record<PromptType, { label: string; icon: string; tips: string[] }> = {
   text: {
     label: "Text Generation",
@@ -57,80 +66,22 @@ const promptTypeConfig: Record<PromptType, { label: string; icon: string; tips: 
   },
 }
 
-function optimizePrompt(prompt: string, type: PromptType): string {
-  const config = promptTypeConfig[type]
-  const lines: string[] = []
+async function optimizePrompt(prompt: string, type: PromptType): Promise<string> {
+  const response = await fetch('/api/optimize', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ prompt, type }),
+  })
 
-  switch (type) {
-    case "text":
-      lines.push(`[TASK] Generate high-quality written content`)
-      lines.push(``)
-      lines.push(`[CONTEXT]`)
-      lines.push(prompt)
-      lines.push(``)
-      lines.push(`[INSTRUCTIONS]`)
-      lines.push(`- Write in a clear, engaging style`)
-      lines.push(`- Ensure proper grammar and punctuation`)
-      lines.push(`- Structure content logically with clear flow`)
-      lines.push(`- Adapt tone to match the content purpose`)
-      break
-
-    case "image":
-      lines.push(`[IMAGE GENERATION PROMPT]`)
-      lines.push(``)
-      lines.push(`Subject: ${prompt}`)
-      lines.push(``)
-      lines.push(`Style: Highly detailed, professional quality`)
-      lines.push(`Lighting: Cinematic, natural lighting with soft shadows`)
-      lines.push(`Composition: Rule of thirds, balanced framing`)
-      lines.push(`Quality: 8K resolution, sharp focus, high detail`)
-      lines.push(`Mood: Vivid, atmospheric`)
-      break
-
-    case "video":
-      lines.push(`[VIDEO GENERATION PROMPT]`)
-      lines.push(``)
-      lines.push(`Scene Description:`)
-      lines.push(prompt)
-      lines.push(``)
-      lines.push(`Technical Specifications:`)
-      lines.push(`- Smooth camera movements`)
-      lines.push(`- Cinematic transitions between scenes`)
-      lines.push(`- High frame rate for fluid motion`)
-      lines.push(`- Professional color grading`)
-      lines.push(`- Ambient audio matching the scene mood`)
-      break
-
-    case "code":
-      lines.push(`[CODE GENERATION REQUEST]`)
-      lines.push(``)
-      lines.push(`Objective:`)
-      lines.push(prompt)
-      lines.push(``)
-      lines.push(`Requirements:`)
-      lines.push(`- Write clean, well-documented code`)
-      lines.push(`- Include helpful comments explaining logic`)
-      lines.push(`- Follow best practices and design patterns`)
-      lines.push(`- Handle edge cases and errors gracefully`)
-      lines.push(`- Optimize for readability and maintainability`)
-      break
-
-    case "music":
-      lines.push(`[MUSIC GENERATION PROMPT]`)
-      lines.push(``)
-      lines.push(`Description:`)
-      lines.push(prompt)
-      lines.push(``)
-      lines.push(`Musical Elements:`)
-      lines.push(`- Clear melodic structure with memorable hooks`)
-      lines.push(`- Well-balanced mix of instruments`)
-      lines.push(`- Dynamic progression with builds and releases`)
-      lines.push(`- Professional production quality`)
-      lines.push(`- Emotionally resonant arrangement`)
-      break
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to optimize prompt')
   }
 
-  return lines.join("\n")
+  const data: OptimizeResponse = await response.json()
+  return data.optimizedPrompt
 }
 
 export function PromptOptimizerContent() {
@@ -138,18 +89,23 @@ export function PromptOptimizerContent() {
   const [outputPrompt, setOutputPrompt] = useState("")
   const [selectedType, setSelectedType] = useState<PromptType>("text")
   const [isProcessing, setIsProcessing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleOptimize = () => {
+  const handleOptimize = async () => {
     if (!inputPrompt.trim()) return
 
     setIsProcessing(true)
+    setError(null)
     
-    // Simulate processing delay for retro feel
-    setTimeout(() => {
-      const optimized = optimizePrompt(inputPrompt, selectedType)
+    try {
+      const optimized = await optimizePrompt(inputPrompt, selectedType)
       setOutputPrompt(optimized)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred while optimizing')
+      console.error('Optimization error:', err)
+    } finally {
       setIsProcessing(false)
-    }, 800)
+    }
   }
 
   const handleCopy = () => {
@@ -159,6 +115,7 @@ export function PromptOptimizerContent() {
   const handleClear = () => {
     setInputPrompt("")
     setOutputPrompt("")
+    setError(null)
   }
 
   return (
@@ -200,7 +157,7 @@ export function PromptOptimizerContent() {
           value={inputPrompt}
           onChange={(e) => setInputPrompt(e.target.value)}
           placeholder="Enter your prompt here..."
-          className="w-full h-32 p-3 bg-input border-2 border-border text-lg text-card-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:border-primary font-mono"
+          className="w-full h-32 min-h-[8rem] max-h-[32rem] p-3 bg-input border-2 border-border text-lg text-card-foreground placeholder:text-muted-foreground resize-y focus:outline-none focus:border-primary font-mono"
         />
       </div>
 
@@ -211,7 +168,7 @@ export function PromptOptimizerContent() {
           disabled={!inputPrompt.trim() || isProcessing}
           className="px-4 py-2 bg-primary text-primary-foreground border-2 border-border text-lg font-bold hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
         >
-          {isProcessing ? "Processing..." : "Optimize Prompt"}
+          {isProcessing ? "Optimizing..." : "Optimize Prompt"}
         </button>
         <button
           onClick={handleClear}
@@ -220,6 +177,14 @@ export function PromptOptimizerContent() {
           Clear
         </button>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-500/20 border-2 border-red-500 p-3 text-red-500">
+          <p className="font-bold">Error:</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
 
       {/* Output Area */}
       {outputPrompt && (
@@ -233,9 +198,12 @@ export function PromptOptimizerContent() {
               Copy to Clipboard
             </button>
           </div>
-          <pre className="w-full p-3 bg-input border-2 border-border text-lg text-card-foreground whitespace-pre-wrap font-mono overflow-auto max-h-64">
-            {outputPrompt}
-          </pre>
+          <textarea
+            value={outputPrompt}
+            onChange={(e) => setOutputPrompt(e.target.value)}
+            placeholder="Your optimized prompt will appear here..."
+            className="w-full min-h-[16rem] max-h-[48rem] p-3 bg-input border-2 border-border text-lg text-card-foreground placeholder:text-muted-foreground whitespace-pre-wrap font-mono overflow-auto resize-y focus:outline-none focus:border-primary"
+          />
         </div>
       )}
     </div>

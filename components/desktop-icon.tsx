@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { useState, useRef, useCallback, type ReactNode, type MouseEvent } from "react"
+import { useState, useRef, useCallback, useEffect, type ReactNode, type MouseEvent } from "react"
 
 // Grid settings for snap-to-grid behavior
 const GRID_SIZE_X = 90 // Width of each grid cell
@@ -28,6 +28,9 @@ interface DesktopIconProps {
   selected?: boolean
   initialPosition?: { x: number; y: number }
   draggable?: boolean
+  iconId?: string
+  occupiedPositions?: Record<string, { x: number; y: number }>
+  onPositionChange?: (iconId: string, position: { x: number; y: number }) => void
 }
 
 export function DesktopIcon({ 
@@ -38,7 +41,10 @@ export function DesktopIcon({
   className, 
   selected,
   initialPosition,
-  draggable = true
+  draggable = true,
+  iconId,
+  occupiedPositions = {},
+  onPositionChange
 }: DesktopIconProps) {
   // Snap initial position to grid
   const snappedInitial = initialPosition ? snapToGrid(initialPosition.x, initialPosition.y) : { x: 0, y: 0 }
@@ -50,6 +56,29 @@ export function DesktopIcon({
   const clickTimeout = useRef<NodeJS.Timeout | null>(null)
 
   const [snapPreview, setSnapPreview] = useState(snappedInitial)
+
+  // Register initial position on mount and when position changes
+  useEffect(() => {
+    if (iconId && onPositionChange && initialPosition) {
+      const snapped = snapToGrid(initialPosition.x, initialPosition.y)
+      onPositionChange(iconId, snapped)
+      setPosition(snapped)
+      setDragPosition(snapped)
+      setSnapPreview(snapped)
+    }
+  }, [iconId, onPositionChange, initialPosition?.x, initialPosition?.y])
+
+  // Check if a position is occupied by another icon
+  const isPositionOccupied = useCallback((pos: { x: number; y: number }) => {
+    if (!iconId || !occupiedPositions) return false
+    
+    return Object.entries(occupiedPositions).some(([id, occupiedPos]) => {
+      // Don't check against self
+      if (id === iconId) return false
+      // Check if positions match
+      return occupiedPos.x === pos.x && occupiedPos.y === pos.y
+    })
+  }, [iconId, occupiedPositions])
 
   const handleMouseDown = useCallback((e: MouseEvent) => {
     if (!draggable || !initialPosition) return
@@ -85,9 +114,23 @@ export function DesktopIcon({
       const clampedX = Math.max(0, Math.min(finalX, maxX))
       const clampedY = Math.max(0, Math.min(finalY, maxY))
       const snapped = snapToGrid(clampedX, clampedY)
-      setPosition(snapped)
-      setDragPosition(snapped)
-      setSnapPreview(snapped)
+      
+      // Check for collision
+      if (isPositionOccupied(snapped)) {
+        // Position is occupied, revert to previous position
+        setDragPosition(position)
+        setSnapPreview(position)
+      } else {
+        // Position is free, move there
+        setPosition(snapped)
+        setDragPosition(snapped)
+        setSnapPreview(snapped)
+        // Notify parent of position change
+        if (iconId && onPositionChange) {
+          onPositionChange(iconId, snapped)
+        }
+      }
+      
       setIsDragging(false)
       document.removeEventListener("mousemove", handleMouseMove)
       document.removeEventListener("mouseup", handleMouseUp)
@@ -95,7 +138,7 @@ export function DesktopIcon({
 
     document.addEventListener("mousemove", handleMouseMove)
     document.addEventListener("mouseup", handleMouseUp)
-  }, [draggable, initialPosition, position])
+  }, [draggable, initialPosition, position, isPositionOccupied, iconId, onPositionChange])
 
   const handleClick = (e: MouseEvent) => {
     if (hasMoved) return
@@ -137,12 +180,19 @@ export function DesktopIcon({
 
   if (initialPosition) {
     const displayPos = isDragging ? dragPosition : position
+    const isOccupied = isPositionOccupied(snapPreview)
+    
     return (
       <>
         {/* Snap preview ghost - shows where icon will land */}
         {isDragging && (
           <div 
-            className="absolute w-20 h-20 border-2 border-dashed border-primary/60 bg-primary/10 pointer-events-none"
+            className={cn(
+              "absolute w-20 h-20 border-2 border-dashed pointer-events-none",
+              isOccupied 
+                ? "border-red-500 bg-red-500/20" 
+                : "border-primary/60 bg-primary/10"
+            )}
             style={{ left: snapPreview.x, top: snapPreview.y }}
           />
         )}
