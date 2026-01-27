@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils"
 import { useState, useRef, useCallback, useEffect, type ReactNode, type MouseEvent } from "react"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 // Grid settings for snap-to-grid behavior
 const GRID_SIZE_X = 90 // Width of each grid cell
@@ -46,6 +47,7 @@ export function DesktopIcon({
   occupiedPositions = {},
   onPositionChange
 }: DesktopIconProps) {
+  const isMobile = useIsMobile()
   // Snap initial position to grid
   const snappedInitial = initialPosition ? snapToGrid(initialPosition.x, initialPosition.y) : { x: 0, y: 0 }
   const [position, setPosition] = useState(snappedInitial)
@@ -54,19 +56,62 @@ export function DesktopIcon({
   const [hasMoved, setHasMoved] = useState(false)
   const dragOffset = useRef({ x: 0, y: 0 })
   const clickTimeout = useRef<NodeJS.Timeout | null>(null)
+  const hasInitialized = useRef(false)
 
   const [snapPreview, setSnapPreview] = useState(snappedInitial)
 
   // Register initial position on mount and when position changes
   useEffect(() => {
     if (iconId && onPositionChange && initialPosition) {
+      // On mobile, only update position on first mount to prevent shifting
+      if (isMobile && hasInitialized.current) {
+        return
+      }
+      
       const snapped = snapToGrid(initialPosition.x, initialPosition.y)
-      onPositionChange(iconId, snapped)
-      setPosition(snapped)
-      setDragPosition(snapped)
-      setSnapPreview(snapped)
+      
+      // Keep icon within viewport bounds
+      const maxX = window.innerWidth - GRID_SIZE_X
+      const maxY = window.innerHeight - GRID_SIZE_Y - 40
+      const boundedSnapped = {
+        x: Math.max(0, Math.min(snapped.x, maxX)),
+        y: Math.max(0, Math.min(snapped.y, maxY))
+      }
+      
+      onPositionChange(iconId, boundedSnapped)
+      setPosition(boundedSnapped)
+      setDragPosition(boundedSnapped)
+      setSnapPreview(boundedSnapped)
+      hasInitialized.current = true
     }
-  }, [iconId, onPositionChange, initialPosition?.x, initialPosition?.y])
+  }, [iconId, onPositionChange, initialPosition?.x, initialPosition?.y, isMobile])
+
+  // Handle window resize to keep icons within bounds (desktop only)
+  useEffect(() => {
+    if (!initialPosition || isMobile) return
+
+    const handleResize = () => {
+      const maxX = window.innerWidth - GRID_SIZE_X
+      const maxY = window.innerHeight - GRID_SIZE_Y - 40
+      
+      setPosition(prev => {
+        const bounded = {
+          x: Math.max(0, Math.min(prev.x, maxX)),
+          y: Math.max(0, Math.min(prev.y, maxY))
+        }
+        
+        // Update parent if position changed
+        if (iconId && onPositionChange && (bounded.x !== prev.x || bounded.y !== prev.y)) {
+          onPositionChange(iconId, bounded)
+        }
+        
+        return bounded
+      })
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [initialPosition, iconId, onPositionChange, isMobile])
 
   // Check if a position is occupied by another icon
   const isPositionOccupied = useCallback((pos: { x: number; y: number }) => {
@@ -81,7 +126,7 @@ export function DesktopIcon({
   }, [iconId, occupiedPositions])
 
   const handleMouseDown = useCallback((e: MouseEvent) => {
-    if (!draggable || !initialPosition) return
+    if (!draggable || !initialPosition || isMobile) return // Disable dragging on mobile
     
     e.preventDefault()
     setHasMoved(false)
@@ -138,7 +183,7 @@ export function DesktopIcon({
 
     document.addEventListener("mousemove", handleMouseMove)
     document.addEventListener("mouseup", handleMouseUp)
-  }, [draggable, initialPosition, position, isPositionOccupied, iconId, onPositionChange])
+  }, [draggable, initialPosition, position, isPositionOccupied, iconId, onPositionChange, isMobile])
 
   const handleClick = (e: MouseEvent) => {
     if (hasMoved) return
