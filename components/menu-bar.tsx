@@ -52,7 +52,6 @@ export function MenuBar({ onGioPromptClick, onFileClick, onEditClick, onSpecialC
       </div>
       <div className="flex items-center gap-2">
         <span className="text-card-foreground text-lg">{time}</span>
-        <span className="text-card-foreground">⌘</span>
       </div>
     </div>
   )
