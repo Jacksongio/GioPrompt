@@ -222,22 +222,24 @@ export default function Home() {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
-      {/* Menu Bar */}
-      <MenuBar 
-        onGioPromptClick={() => {
-          setShowSystemInfo(true)
-          bringToFront("systemInfo")
-        }}
-        onFileClick={() => {
-          setShowFileManager(true)
-          bringToFront("fileManager")
-        }}
-        onEditClick={() => {
-          setShowStyleEditor(true)
-          bringToFront("styleEditor")
-        }}
-        onSpecialClick={() => setShowScreensaver(true)}
-      />
+      {/* Menu Bar - Hidden on mobile when window is open */}
+      {!(isMobile && anyWindowOpen) && (
+        <MenuBar 
+          onGioPromptClick={() => {
+            setShowSystemInfo(true)
+            bringToFront("systemInfo")
+          }}
+          onFileClick={() => {
+            setShowFileManager(true)
+            bringToFront("fileManager")
+          }}
+          onEditClick={() => {
+            setShowStyleEditor(true)
+            bringToFront("styleEditor")
+          }}
+          onSpecialClick={() => setShowScreensaver(true)}
+        />
+      )}
 
       {/* Desktop Area */}
       <main className="flex-1 relative p-4 overflow-hidden">

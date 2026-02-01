@@ -241,7 +241,7 @@ export function MacWindow({
       <div 
         className={cn(
           "flex items-center justify-between bg-primary px-2 py-1 border-b-2 border-border flex-shrink-0",
-          draggable && !isMobile && "cursor-grab",
+          draggable && !isMobile && !isMaximized && "cursor-grab",
           isDragging && "cursor-grabbing"
         )}
         onMouseDown={handleMouseDown}
@@ -271,10 +271,12 @@ export function MacWindow({
         <div className="w-16" />
       </div>
       {/* Content */}
-      <div className={cn(
-        "flex-1 p-4 bg-card overflow-y-auto overflow-x-hidden",
-        isMaximized && "!h-[calc(100vh-50px)]"
-      )}>
+      <div 
+        className="flex-1 p-4 bg-card overflow-y-auto overflow-x-hidden"
+        style={{
+          minHeight: 0 // Critical for flex child with overflow to work properly
+        }}
+      >
         {children}
       </div>
       {/* Resize Handles */}
