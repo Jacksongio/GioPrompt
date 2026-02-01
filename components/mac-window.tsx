@@ -17,6 +17,7 @@ interface MacWindowProps {
   zIndex?: number
   canMinimize?: boolean
   canMaximize?: boolean
+  centerOnMount?: boolean
 }
 
 type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw' | null
@@ -36,14 +37,14 @@ export function MacWindow({
   onFocus,
   zIndex = 1,
   canMinimize = false,
-  canMaximize = false
+  canMaximize = false,
+  centerOnMount = false
 }: MacWindowProps) {
   const isMobile = useIsMobile()
   const [position, setPosition] = useState(initialPosition)
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [isResizing, setIsResizing] = useState<ResizeDirection>(null)
-  const [isMinimized, setIsMinimized] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
   const [preMaximizeState, setPreMaximizeState] = useState({ position: initialPosition, size: { width: 0, height: 0 }, wasSet: false })
   const dragOffset = useRef({ x: 0, y: 0 })
@@ -51,6 +52,7 @@ export function MacWindow({
   const windowRef = useRef<HTMLDivElement>(null)
 
   // Center window on mobile when it mounts or when switching to mobile
+  // Also center on desktop if centerOnMount is true
   useEffect(() => {
     if (isMobile && draggable) {
       const centerX = (window.innerWidth - (windowRef.current?.offsetWidth || 0)) / 2
@@ -59,8 +61,16 @@ export function MacWindow({
         x: Math.max(8, centerX),
         y: Math.max(MENU_BAR_HEIGHT + 8, centerY)
       })
+    } else if (centerOnMount && !isMobile && windowRef.current) {
+      // Center on desktop when centerOnMount is true, positioned higher
+      const centerX = (window.innerWidth - windowRef.current.offsetWidth) / 2
+      const centerY = (window.innerHeight - windowRef.current.offsetHeight) / 2 - 120
+      setPosition({
+        x: Math.max(0, centerX),
+        y: Math.max(MENU_BAR_HEIGHT, centerY)
+      })
     }
-  }, [isMobile, draggable])
+  }, [isMobile, draggable, centerOnMount])
 
   const handleMouseDown = useCallback((e: MouseEvent) => {
     if (!draggable || isMobile) return // Disable dragging on mobile
@@ -165,12 +175,6 @@ export function MacWindow({
     onFocus?.()
   }
 
-  const handleMinimize = (e: MouseEvent) => {
-    e.stopPropagation()
-    setIsMinimized(!isMinimized)
-    if (isMaximized) setIsMaximized(false)
-  }
-
   const handleMaximize = (e: MouseEvent) => {
     e.stopPropagation()
     if (!isMaximized) {
@@ -181,7 +185,6 @@ export function MacWindow({
       setSize(preMaximizeState.size)
     }
     setIsMaximized(!isMaximized)
-    if (isMinimized) setIsMinimized(false)
   }
 
   return (
@@ -192,25 +195,44 @@ export function MacWindow({
         resizable && !isMaximized && "min-w-[320px] min-h-[200px]",
         draggable && "absolute",
         isDragging && "cursor-grabbing select-none",
-        isMaximized && `!w-[calc(100vw-8px)]`,
-        // Mobile-specific styles: take almost full screen and center, below menu bar
-        isMobile && `!fixed !w-[calc(100vw-32px)] !left-4`,
-        className
+        // Apply custom className only when not maximized
+        !isMaximized && className,
+        // Desktop maximized: fullscreen
+        isMaximized && !isMobile && `!fixed !w-screen !h-screen !left-0 !top-0`,
+        // Mobile-specific styles
+        isMobile && !isMaximized && `!fixed !w-[calc(100vw-16px)] !left-2`,
+        // Mobile maximized: true fullscreen
+        isMobile && isMaximized && `!fixed !w-screen !h-screen !left-0 !top-0 !border-0 !rounded-none`
       )}
       style={{ 
         ...(maxHeight && !isMaximized && !isMobile ? { maxHeight } : {}),
-        ...(draggable && !isMobile ? { 
-          left: isMaximized ? 4 : position.x, 
-          top: isMaximized ? MENU_BAR_HEIGHT : position.y, 
+        ...(draggable && !isMobile && !isMaximized ? { 
+          left: position.x, 
+          top: position.y, 
           zIndex 
         } : {}),
         ...(size.width > 0 && !isMaximized && !isMobile ? { width: size.width } : {}),
         ...(size.height > 0 && !isMaximized && !isMobile ? { height: size.height } : {}),
-        ...(isMaximized && !isMobile ? { height: `calc(100vh - ${MENU_BAR_HEIGHT + 28}px)` } : {}),
-        ...(isMobile ? { 
+        ...(isMaximized && !isMobile ? { 
+          zIndex: 9999,
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          maxHeight: '100vh'
+        } : {}),
+        ...(isMobile && !isMaximized ? { 
           zIndex,
           top: MENU_BAR_HEIGHT + 16,
           height: `calc(100vh - ${MENU_BAR_HEIGHT + 48}px)`
+        } : {}),
+        ...(isMobile && isMaximized ? {
+          zIndex: 9999,
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          maxHeight: '100vh'
         } : {})
       }}
       onClick={handleWindowClick}
@@ -235,15 +257,6 @@ export function MacWindow({
           >
             <span className="text-[10px] leading-none text-card-foreground">x</span>
           </button>
-          {canMinimize && (
-            <button
-              onClick={handleMinimize}
-              className="w-4 h-4 bg-card border border-border flex items-center justify-center hover:bg-secondary transition-colors"
-              aria-label="Minimize window"
-            >
-              <span className="text-[10px] leading-none text-card-foreground">-</span>
-            </button>
-          )}
           {canMaximize && (
             <button
               onClick={handleMaximize}
@@ -258,13 +271,14 @@ export function MacWindow({
         <div className="w-16" />
       </div>
       {/* Content */}
-      {!isMinimized && (
-        <div className="flex-1 p-4 bg-card overflow-auto">
-          {children}
-        </div>
-      )}
+      <div className={cn(
+        "flex-1 p-4 bg-card overflow-auto",
+        isMaximized && "!h-[calc(100vh-50px)]"
+      )}>
+        {children}
+      </div>
       {/* Resize Handles */}
-      {resizable && !isMinimized && !isMaximized && !isMobile && (
+      {resizable && !isMaximized && !isMobile && (
         <>
           {/* Edge Handles */}
           <div 

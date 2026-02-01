@@ -216,7 +216,7 @@ export default function Home() {
   }, [])
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
       {/* Menu Bar */}
       <MenuBar 
         onGioPromptClick={() => {
@@ -235,7 +235,7 @@ export default function Home() {
       />
 
       {/* Desktop Area */}
-      <main className="flex-1 relative p-4 overflow-auto">
+      <main className="flex-1 relative p-4 overflow-hidden">
         {/* Background Logo */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <img 
@@ -400,7 +400,7 @@ export default function Home() {
         {showOptimizer && (
           <MacWindow
             title="GioPrompt v1.0 - Prompt Optimizer"
-            className="w-[calc(100vw-140px)] sm:w-[calc(100vw-140px)] max-w-[1400px] max-h-[calc(100vh-100px)]"
+            className="w-full sm:w-[calc(100vw-140px)] sm:max-w-[1400px]"
             onClose={() => setShowOptimizer(false)}
             draggable
             resizable
@@ -408,6 +408,7 @@ export default function Home() {
             onFocus={() => bringToFront("optimizer")}
             zIndex={getZIndex("optimizer")}
             canMaximize
+            centerOnMount
           >
             <PromptOptimizerContent />
           </MacWindow>
@@ -416,13 +417,12 @@ export default function Home() {
         {showAbout && (
           <MacWindow
             title="About GioPrompt"
-            className="w-80 max-w-[calc(100vw-32px)]"
+            className="w-full sm:w-80"
             onClose={() => setShowAbout(false)}
             draggable
             initialPosition={{ x: 200, y: 120 }}
             onFocus={() => bringToFront("about")}
             zIndex={getZIndex("about")}
-            canMinimize
             canMaximize
           >
             <div className="flex flex-col items-center gap-4 text-center">
@@ -447,13 +447,12 @@ export default function Home() {
         {showHelp && (
           <MacWindow
             title="Help"
-            className="w-96 max-w-[calc(100vw-32px)]"
+            className="w-full sm:w-96"
             onClose={() => setShowHelp(false)}
             draggable
             initialPosition={{ x: 250, y: 140 }}
             onFocus={() => bringToFront("help")}
             zIndex={getZIndex("help")}
-            canMinimize
             canMaximize
           >
             <div className="flex flex-col gap-4 text-card-foreground">

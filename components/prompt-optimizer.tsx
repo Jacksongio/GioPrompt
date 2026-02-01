@@ -149,8 +149,8 @@ export function PromptOptimizerContent() {
     <div className="flex flex-col gap-4">
       {/* Type Selector */}
       <div className="flex flex-col gap-2">
-        <label className="text-card-foreground text-lg font-bold">Select Generation Type:</label>
-        <div className="flex flex-wrap gap-2">
+        <label className="text-card-foreground text-lg font-bold text-center sm:text-left">Select Generation Type:</label>
+        <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
           {(Object.keys(promptTypeConfig) as PromptType[]).map((type) => (
             <button
               key={type}
