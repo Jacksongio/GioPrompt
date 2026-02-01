@@ -200,7 +200,7 @@ export function MacWindow({
         // Desktop maximized: fullscreen
         isMaximized && !isMobile && `!fixed !w-screen !h-screen !left-0 !top-0`,
         // Mobile-specific styles
-        isMobile && !isMaximized && `!fixed !w-[calc(100vw-16px)] !left-2`,
+        isMobile && !isMaximized && `!fixed !w-[calc(100vw-16px)] !left-2 !overflow-hidden`,
         // Mobile maximized: true fullscreen
         isMobile && isMaximized && `!fixed !w-screen !h-screen !left-0 !top-0 !border-0 !rounded-none`
       )}
@@ -273,7 +273,8 @@ export function MacWindow({
       {/* Content */}
       <div className={cn(
         "flex-1 p-4 bg-card overflow-auto",
-        isMaximized && "!h-[calc(100vh-50px)]"
+        isMaximized && "!h-[calc(100vh-50px)]",
+        isMobile && !isMaximized && "max-h-[calc(100vh-110px)]"
       )}>
         {children}
       </div>

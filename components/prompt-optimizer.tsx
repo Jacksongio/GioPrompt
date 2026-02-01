@@ -99,6 +99,7 @@ export function PromptOptimizerContent() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [isCopied, setIsCopied] = useState(false)
   const [advancedParams, setAdvancedParams] = useState<AdvancedParams>({
     text: {},
     image: {},
@@ -137,6 +138,10 @@ export function PromptOptimizerContent() {
 
   const handleCopy = () => {
     navigator.clipboard.writeText(outputPrompt)
+    setIsCopied(true)
+    setTimeout(() => {
+      setIsCopied(false)
+    }, 2000)
   }
 
   const handleClear = () => {
@@ -415,13 +420,18 @@ export function PromptOptimizerContent() {
       {/* Output Area */}
       {outputPrompt && (
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <label className="text-card-foreground text-lg font-bold">Optimized Prompt:</label>
             <button
               onClick={handleCopy}
-              className="px-3 py-1 bg-secondary text-card-foreground border-2 border-border text-sm hover:bg-muted"
+              className={`px-3 py-1 border-2 border-border text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
+                isCopied 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-secondary text-card-foreground hover:bg-muted"
+              }`}
             >
-              Copy to Clipboard
+              <span className="hidden sm:inline">{isCopied ? "Copied!" : "Copy to Clipboard"}</span>
+              <span className="sm:hidden">{isCopied ? "Copied!" : "Copy"}</span>
             </button>
           </div>
           <textarea
