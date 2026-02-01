@@ -9,6 +9,7 @@ import { StyleEditor } from "@/components/style-editor"
 import { FlyingToasters } from "@/components/flying-toasters"
 import { FileManager } from "@/components/file-manager"
 import { SystemInfo } from "@/components/system-info"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 type WindowId = "optimizer" | "about" | "help" | "styleEditor" | "fileManager" | "systemInfo"
 
@@ -120,6 +121,7 @@ function CoffeeIcon() {
 }
 
 export default function Home() {
+  const isMobile = useIsMobile()
   const [showOptimizer, setShowOptimizer] = useState(true)
   const [showAbout, setShowAbout] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
@@ -135,6 +137,9 @@ export default function Home() {
     bomb: { x: 8, y: 600 }, 
     sadmac: { x: 8, y: 684 } 
   })
+  
+  // Check if any window is open (for mobile)
+  const anyWindowOpen = showOptimizer || showAbout || showHelp || showStyleEditor || showFileManager || showSystemInfo
   
   // Helper function to snap to grid (same logic as in DesktopIcon)
   const snapToGrid = useCallback((x: number, y: number) => {
@@ -236,16 +241,20 @@ export default function Home() {
 
       {/* Desktop Area */}
       <main className="flex-1 relative p-4 overflow-hidden">
-        {/* Background Logo */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <img 
-            src="/gioprompt.png" 
-            alt="GioPrompt Logo" 
-            className="max-w-[40%] max-h-[40%] object-contain"
-          />
-        </div>
+        {/* Background Logo - Hidden on mobile when window is open */}
+        {!(isMobile && anyWindowOpen) && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <img 
+              src="/gioprompt.png" 
+              alt="GioPrompt Logo" 
+              className="max-w-[40%] max-h-[40%] object-contain"
+            />
+          </div>
+        )}
 
-        {/* Desktop Icons - all draggable */}
+        {/* Desktop Icons - Hidden on mobile when window is open */}
+        {!(isMobile && anyWindowOpen) && (
+          <>
         <DesktopIcon
           icon={<PromptIcon />}
           label="GioPrompt"
@@ -395,6 +404,8 @@ export default function Home() {
           occupiedPositions={iconPositions}
           onPositionChange={handleIconPositionChange}
         />
+        </>
+        )}
 
         {/* Draggable Windows */}
         {showOptimizer && (
@@ -496,11 +507,13 @@ export default function Home() {
         )}
       </main>
 
-      {/* Status Bar - Fixed at bottom */}
-      <div className="flex-shrink-0 bg-card border-t-2 border-border px-4 py-1 flex items-center justify-between">
-        <span className="text-card-foreground text-sm">Ready</span>
-        <span className="text-card-foreground text-sm">GioPrompt System v1.0</span>
-      </div>
+      {/* Status Bar - Fixed at bottom, hidden on mobile when window is open */}
+      {!(isMobile && anyWindowOpen) && (
+        <div className="flex-shrink-0 bg-card border-t-2 border-border px-4 py-1 flex items-center justify-between">
+          <span className="text-card-foreground text-sm">Ready</span>
+          <span className="text-card-foreground text-sm">GioPrompt System v1.0</span>
+        </div>
+      )}
 
       {/* Flying Toasters Easter Egg */}
       {showScreensaver && (

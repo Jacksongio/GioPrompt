@@ -45,23 +45,22 @@ export function MacWindow({
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [isResizing, setIsResizing] = useState<ResizeDirection>(null)
-  const [isMaximized, setIsMaximized] = useState(false)
+  const [isMaximized, setIsMaximized] = useState(isMobile) // Auto-maximize on mobile
   const [preMaximizeState, setPreMaximizeState] = useState({ position: initialPosition, size: { width: 0, height: 0 }, wasSet: false })
   const dragOffset = useRef({ x: 0, y: 0 })
   const resizeStart = useRef({ x: 0, y: 0, width: 0, height: 0, posX: 0, posY: 0 })
   const windowRef = useRef<HTMLDivElement>(null)
 
-  // Center window on mobile when it mounts or when switching to mobile
-  // Also center on desktop if centerOnMount is true
+  // Auto-maximize on mobile when component mounts or when switching to mobile
   useEffect(() => {
-    if (isMobile && draggable) {
-      const centerX = (window.innerWidth - (windowRef.current?.offsetWidth || 0)) / 2
-      const centerY = (window.innerHeight - (windowRef.current?.offsetHeight || 0)) / 2
-      setPosition({
-        x: Math.max(8, centerX),
-        y: Math.max(MENU_BAR_HEIGHT + 8, centerY)
-      })
-    } else if (centerOnMount && !isMobile && windowRef.current) {
+    if (isMobile) {
+      setIsMaximized(true)
+    }
+  }, [isMobile])
+
+  // Center window on desktop if centerOnMount is true
+  useEffect(() => {
+    if (centerOnMount && !isMobile && windowRef.current) {
       // Center on desktop when centerOnMount is true, positioned higher
       const centerX = (window.innerWidth - windowRef.current.offsetWidth) / 2
       const centerY = (window.innerHeight - windowRef.current.offsetHeight) / 2 - 120
@@ -70,7 +69,7 @@ export function MacWindow({
         y: Math.max(MENU_BAR_HEIGHT, centerY)
       })
     }
-  }, [isMobile, draggable, centerOnMount])
+  }, [centerOnMount, isMobile])
 
   const handleMouseDown = useCallback((e: MouseEvent) => {
     if (!draggable || isMobile) return // Disable dragging on mobile
