@@ -224,7 +224,8 @@ export function MacWindow({
         ...(isMobile && !isMaximized ? { 
           zIndex,
           top: MENU_BAR_HEIGHT + 16,
-          height: `calc(100vh - ${MENU_BAR_HEIGHT + 48}px)`
+          height: `calc(100vh - ${MENU_BAR_HEIGHT + 80}px)`,
+          maxHeight: `calc(100vh - ${MENU_BAR_HEIGHT + 80}px)`
         } : {}),
         ...(isMobile && isMaximized ? {
           zIndex: 9999,
@@ -272,9 +273,8 @@ export function MacWindow({
       </div>
       {/* Content */}
       <div className={cn(
-        "flex-1 p-4 bg-card overflow-auto",
-        isMaximized && "!h-[calc(100vh-50px)]",
-        isMobile && !isMaximized && "max-h-[calc(100vh-110px)]"
+        "flex-1 p-4 bg-card overflow-y-auto overflow-x-hidden",
+        isMaximized && "!h-[calc(100vh-50px)]"
       )}>
         {children}
       </div>
