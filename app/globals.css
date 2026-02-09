@@ -4,14 +4,14 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Classic Macintosh Color Palette */
-  --background: #0000aa; /* Classic Mac blue desktop */
+  /* Mac OS Classic palette */
+  --background: #0000aa;
   --foreground: #ffffff;
-  --card: #c0c0c0; /* Classic gray window */
+  --card: #c0c0c0;
   --card-foreground: #000000;
   --popover: #c0c0c0;
   --popover-foreground: #000000;
-  --primary: #000080; /* Dark blue for title bars */
+  --primary: #000080;
   --primary-foreground: #ffffff;
   --secondary: #dfdfdf;
   --secondary-foreground: #000000;
@@ -29,7 +29,7 @@
   --chart-3: #808080;
   --chart-4: #c0c0c0;
   --chart-5: #ffffff;
-  --radius: 0px; /* Sharp corners for retro look */
+  --radius: 0px;
   --sidebar: #c0c0c0;
   --sidebar-foreground: #000000;
   --sidebar-primary: #000080;

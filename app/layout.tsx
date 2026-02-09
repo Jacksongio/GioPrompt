@@ -9,7 +9,6 @@ const vt323 = VT323({ weight: '400', subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'GioPrompt - AI Prompt Optimizer',
   description: 'Transform your AI prompts into powerful, optimized instructions for video, text, and image generation',
-  generator: 'v0.app',
   icons: {
     icon: '/favicon.ico',
   },

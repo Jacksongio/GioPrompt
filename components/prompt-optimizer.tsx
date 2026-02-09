@@ -119,10 +119,10 @@ export function PromptOptimizerContent() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 h-full">
       {/* Type Selector */}
       <div className="flex flex-col gap-2">
-        <label className="text-card-foreground text-lg font-bold">Select Generation Type:</label>
+        <label className="text-white text-lg font-bold">Select Generation Type:</label>
         <div className="flex flex-wrap gap-2">
           {(Object.keys(promptTypeConfig) as PromptType[]).map((type) => (
             <button
@@ -152,7 +152,7 @@ export function PromptOptimizerContent() {
 
       {/* Input Area */}
       <div className="flex flex-col gap-2">
-        <label className="text-card-foreground text-lg font-bold">Your Prompt:</label>
+        <label className="text-white text-lg font-bold">Your Prompt:</label>
         <textarea
           value={inputPrompt}
           onChange={(e) => setInputPrompt(e.target.value)}
@@ -188,7 +188,7 @@ export function PromptOptimizerContent() {
 
       {/* Output Area */}
       {outputPrompt && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 flex-1 min-h-0">
           <div className="flex items-center justify-between">
             <label className="text-card-foreground text-lg font-bold">Optimized Prompt:</label>
             <button
