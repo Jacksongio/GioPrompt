@@ -17,7 +17,7 @@ async function loadMetaPrompt(type: PromptType): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, type } = await request.json()
+    const { prompt, type, advancedFields } = await request.json()
 
     if (!prompt || !type) {
       return NextResponse.json(
@@ -36,6 +36,16 @@ export async function POST(request: NextRequest) {
     // Load the appropriate meta-prompt
     const metaPrompt = await loadMetaPrompt(type as PromptType)
 
+    // Build the user message with advanced fields if provided
+    let userMessage = `Please optimize this ${type} generation prompt:\n\n${prompt}`
+    
+    if (advancedFields && Object.keys(advancedFields).length > 0) {
+      userMessage += '\n\nAdditional context to incorporate:'
+      Object.entries(advancedFields).forEach(([key, value]) => {
+        userMessage += `\n- ${key}: ${value}`
+      })
+    }
+
     // Call OpenAI API to optimize the prompt
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -46,7 +56,7 @@ export async function POST(request: NextRequest) {
         },
         {
           role: 'user',
-          content: `Please optimize this ${type} generation prompt:\n\n${prompt}`,
+          content: userMessage,
         },
       ],
       temperature: 0.7,
